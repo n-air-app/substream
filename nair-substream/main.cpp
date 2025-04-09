@@ -8,12 +8,17 @@
 #include "../thirdparty/json.hpp"
 using json = nlohmann::json;
 
+#include "version.h"
+
 #pragma comment(lib, "obs.lib")
 
 obs_output *output = nullptr;
 std::chrono::steady_clock::time_point begin_time = {};
 std::string statusMessage = "";
 std::string errorMessage = "";
+
+bool isActive = false;
+HANDLE hThread = nullptr;
 
 //-------------------------------------------
 void onStarting(void *x, calldata_t *)
@@ -220,10 +225,9 @@ json getStatus()
 	r["active"] = active;
 	r["status"] = statusMessage;
 	r["error"] = errorMessage;
-	r["process"] = GetCurrentProcessId();
 	if (active)
 	{
-		r["duration"] =(std::chrono::steady_clock::now() - begin_time) / std::chrono::seconds(1);
+		r["duration"] = (std::chrono::steady_clock::now() - begin_time) / std::chrono::seconds(1);
 		r["connect_time"] = obs_output_get_connect_time_ms(output);
 		r["bytes"] = obs_output_get_total_bytes(output);
 		r["frames"] = obs_output_get_total_frames(output);
@@ -231,6 +235,14 @@ json getStatus()
 		r["dropped"] = obs_output_get_frames_dropped(output);
 	}
 
+	return r;
+}
+
+json getInfo()
+{
+	json r;
+	r["version"] = VERSION;
+	r["process"] = GetCurrentProcessId();
 	return r;
 }
 
@@ -251,20 +263,22 @@ json anyFunction(const json &arg)
 		r = stop();
 	if (fn == "status")
 		r = getStatus();
+	if (fn == "info")
+		r = getInfo();
 
 	json result = {{"id", id}, {"res", r}};
 	return result;
 }
 
 // nameがユニークなので複数起動はできないので注意
-#define PIPE_NAME "\\\\.\\pipe\\NAirSubstream"
+#define PIPE_NAME L"\\\\.\\pipe\\NAirSubstream"
 #define BUFFER_SIZE 4096
 
-DWORD WINAPI Serve(LPVOID lpParam)
+DWORD WINAPI serve(LPVOID lpParam)
 {
 
-	HANDLE hPipe = CreateNamedPipeA(PIPE_NAME, PIPE_ACCESS_DUPLEX,
-									PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, BUFFER_SIZE, BUFFER_SIZE, 0, NULL);
+	HANDLE hPipe = CreateNamedPipe(PIPE_NAME, PIPE_ACCESS_DUPLEX,
+								   PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, BUFFER_SIZE, BUFFER_SIZE, 0, NULL);
 
 	if (hPipe == INVALID_HANDLE_VALUE)
 	{
@@ -282,10 +296,12 @@ DWORD WINAPI Serve(LPVOID lpParam)
 	char buffer[BUFFER_SIZE + 4];
 	DWORD bytesRead;
 
-	while (true)
+	while (isActive)
 	{
-		if (ReadFile(hPipe, buffer, sizeof(buffer) - 1, &bytesRead, NULL))
+		if (ReadFile(hPipe, buffer, BUFFER_SIZE, &bytesRead, NULL))
 		{
+			if (!bytesRead)
+				continue;
 			buffer[bytesRead] = '\0';
 			// blog(LOG_INFO, "recv %s", buffer);
 			auto j = json::parse(buffer);
@@ -308,15 +324,26 @@ extern "C"
 
 	bool obs_module_load(void)
 	{
-		blog(LOG_INFO, "sssss plugin loaded successfully");
+		blog(LOG_INFO, "substream plugin loaded successfully %s", VERSION);
+
+		isActive = true;
 
 		DWORD threadId;
-		HANDLE hThread = CreateThread(NULL, 0, Serve, 0, 0, &threadId);
+		hThread = CreateThread(NULL, 0, serve, 0, 0, &threadId);
+		if (!hThread)
+		{
+			blog(LOG_INFO, "Failed to create thread.");
+			return false;
+		}
 
 		return true;
 	}
 
 	void obs_module_unload(void)
 	{
+		isActive = false;
+		//	WaitForSingleObject(hThread, INFINITE);
+		CloseHandle(hThread);
+		hThread = nullptr;
 	}
 }

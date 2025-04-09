@@ -1,9 +1,13 @@
 ﻿#define APSTUDIO_READONLY_SYMBOLS
 #include "winres.h"
+#include "version.h"
+
+#define NAME "nair-substream.dll"
+
 
 VS_VERSION_INFO VERSIONINFO
-    FILEVERSION 1,0,5,0
-    PRODUCTVERSION 1,0,5,0
+    FILEVERSION 1,0,0,0
+    PRODUCTVERSION 1,0,0,0
     FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
     FILEFLAGS 0x1L
@@ -17,13 +21,13 @@ VS_VERSION_INFO VERSIONINFO
     BLOCK "StringFileInfo" {
         BLOCK "040904E4" {
             VALUE "CompanyName", "DWANGO Co., Ltd.\0"
-            VALUE "FileDescription", "N Air sub stream\0"
-            VALUE "FileVersion", "1.0.0.0\0"
-            VALUE "InternalName", "nair-substream.dll\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 DWANGO Co., Ltd.\0"
-            VALUE "OriginalFilename", "nair-substream.dll\0"
-            VALUE "ProductName", "nair-substream.dll\0"
-            VALUE "ProductVersion", "1.0.0.0\0"
+            VALUE "FileDescription", NAME "\0"
+            VALUE "InternalName", NAME "\0"
+            VALUE "OriginalFilename", NAME "\0"
+            VALUE "ProductName", NAME "\0"
+            VALUE "FileVersion", VERSION "\0"
+            VALUE "ProductVersion", VERSION "\0"
         }
     }
     BLOCK "VarFileInfo" {
