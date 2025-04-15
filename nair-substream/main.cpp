@@ -13,12 +13,12 @@ using json = nlohmann::json;
 #pragma comment(lib, "obs.lib")
 
 obs_output *output = nullptr;
-std::chrono::steady_clock::time_point begin_time = {};
+std::chrono::steady_clock::time_point beginTime = {};
 std::string statusMessage = "";
 std::string errorMessage = "";
 
 bool isActive = false;
-HANDLE hThread = nullptr;
+HANDLE threadHandle = nullptr;
 
 //-------------------------------------------
 void onStarting(void *x, calldata_t *)
@@ -93,9 +93,9 @@ json enumEncoderTypes()
 			video.push_back(d);
 	}
 
-	json r =
+	json result =
 		{{"encoders", {{"audio", audio}, {"video", video}}}};
-	return r;
+	return result;
 }
 
 void release()
@@ -104,18 +104,18 @@ void release()
 		return;
 	obs_output_stop(output);
 
-	auto venc = obs_output_get_video_encoder(output);
-	if (venc)
+	auto videoEncoder = obs_output_get_video_encoder(output);
+	if (videoEncoder)
 	{
 		obs_output_set_video_encoder(output, nullptr);
-		obs_encoder_release(venc);
+		obs_encoder_release(videoEncoder);
 	}
 
-	auto aenc = obs_output_get_audio_encoder(output, 0);
-	if (aenc)
+	auto audioEncoder = obs_output_get_audio_encoder(output, 0);
+	if (audioEncoder)
 	{
 		obs_output_set_audio_encoder(output, nullptr, 0);
-		obs_encoder_release(aenc);
+		obs_encoder_release(audioEncoder);
 	}
 
 	auto service = obs_output_get_service(output);
@@ -125,16 +125,16 @@ void release()
 		obs_service_release(service);
 	}
 
-	auto signal = obs_output_get_signal_handler(output);
-	if (signal)
+	auto signalHandler = obs_output_get_signal_handler(output);
+	if (signalHandler)
 	{
-		signal_handler_disconnect(signal, "starting", &onStarting, nullptr);
-		signal_handler_disconnect(signal, "start", &onStarted, nullptr);
-		signal_handler_disconnect(signal, "stopping", &onStopping, nullptr);
-		signal_handler_disconnect(signal, "stop", &onStopped, nullptr);
-		signal_handler_disconnect(signal, "reconnect", &onReconnect, nullptr);
-		signal_handler_disconnect(signal, "reconnected_success", &onReconnected, nullptr);
-		signal_handler_disconnect(signal, "deactivate", &onDeactive, nullptr);
+		signal_handler_disconnect(signalHandler, "starting", &onStarting, nullptr);
+		signal_handler_disconnect(signalHandler, "start", &onStarted, nullptr);
+		signal_handler_disconnect(signalHandler, "stopping", &onStopping, nullptr);
+		signal_handler_disconnect(signalHandler, "stop", &onStopped, nullptr);
+		signal_handler_disconnect(signalHandler, "reconnect", &onReconnect, nullptr);
+		signal_handler_disconnect(signalHandler, "reconnected_success", &onReconnected, nullptr);
+		signal_handler_disconnect(signalHandler, "deactivate", &onDeactive, nullptr);
 	}
 
 	obs_output_release(output);
@@ -146,63 +146,63 @@ json start(json &arg)
 	blog(LOG_INFO, "start %s", arg.dump().c_str());
 	release();
 
-	obs_data *output_param = obs_data_create_from_json(arg["output"].dump().c_str());
-	auto op = obs_output_create("rtmp_output", "nass-output", output_param, nullptr);
-	blog(LOG_INFO, "output %x ", op);
-	if (!op)
+	obs_data *outputParam = obs_data_create_from_json(arg["output"].dump().c_str());
+	auto outputInstance = obs_output_create("rtmp_output", "nass-output", outputParam, nullptr);
+	blog(LOG_INFO, "output %x ", outputInstance);
+	if (!outputInstance)
 		return {{"error", "output create failed"}};
 
-	auto service_param = obs_data_create_from_json(arg["service"].dump().c_str());
-	auto service = obs_service_create("rtmp_custom", "nass-service", service_param, nullptr);
+	auto serviceParam = obs_data_create_from_json(arg["service"].dump().c_str());
+	auto service = obs_service_create("rtmp_custom", "nass-service", serviceParam, nullptr);
 	blog(LOG_INFO, "service %x", service);
 	if (!service)
 		return {{"error", "service create failed"}};
-	obs_output_set_service(op, service);
+	obs_output_set_service(outputInstance, service);
 
-	auto venc_param = obs_data_create_from_json(arg["video"].dump().c_str());
-	auto venc_id = arg["videoId"].get_ref<std::string &>().c_str();
-	auto venc = obs_video_encoder_create(venc_id, "nass-videoencoder", venc_param, nullptr);
-	blog(LOG_INFO, "venc %x", venc);
-	if (!venc)
+	auto videoParam = obs_data_create_from_json(arg["video"].dump().c_str());
+	auto videoId = arg["videoId"].get_ref<std::string &>().c_str();
+	auto videoEncoder = obs_video_encoder_create(videoId, "nass-videoencoder", videoParam, nullptr);
+	blog(LOG_INFO, "videoEncoder %x", videoEncoder);
+	if (!videoEncoder)
 		return {{"error", "video encoder create failed"}};
 
 	auto video = obs_get_video();
 	blog(LOG_INFO, "video %x", video);
-	obs_encoder_set_video(venc, video);
+	obs_encoder_set_video(videoEncoder, video);
 
-	auto aenc_param = obs_data_create_from_json(arg["audio"].dump().c_str());
-	auto aenc_id = arg["audioId"].get_ref<std::string &>().c_str();
-	auto aenc = obs_audio_encoder_create(aenc_id, "nass-audioencoder", aenc_param, 0, nullptr);
-	blog(LOG_INFO, "aenc %x", aenc);
-	if (!aenc)
+	auto audioParam = obs_data_create_from_json(arg["audio"].dump().c_str());
+	auto audioId = arg["audioId"].get_ref<std::string &>().c_str();
+	auto audioEncoder = obs_audio_encoder_create(audioId, "nass-audioencoder", audioParam, 0, nullptr);
+	blog(LOG_INFO, "audioEncoder %x", audioEncoder);
+	if (!audioEncoder)
 		return {{"error", "audio encoder create failed"}};
 
 	auto audio = obs_get_audio();
 	blog(LOG_INFO, "audio %x", audio);
-	obs_encoder_set_audio(aenc, audio);
+	obs_encoder_set_audio(audioEncoder, audio);
 
-	obs_output_set_audio_encoder(op, obs_encoder_get_ref(aenc), 0);
-	obs_output_set_video_encoder(op, obs_encoder_get_ref(venc));
+	obs_output_set_audio_encoder(outputInstance, obs_encoder_get_ref(audioEncoder), 0);
+	obs_output_set_video_encoder(outputInstance, obs_encoder_get_ref(videoEncoder));
 
-	auto signal = obs_output_get_signal_handler(op);
-	if (!signal)
+	auto signalHandler = obs_output_get_signal_handler(outputInstance);
+	if (!signalHandler)
 		return {{"error", "signal handler get failed"}};
 
-	signal_handler_connect(signal, "starting", &onStarting, nullptr);
-	signal_handler_connect(signal, "start", &onStarted, nullptr);
-	signal_handler_connect(signal, "stopping", &onStopping, nullptr);
-	signal_handler_connect(signal, "stop", &onStopped, nullptr);
-	signal_handler_connect(signal, "reconnect", &onReconnect, nullptr);
-	signal_handler_connect(signal, "reconnecte_success", &onReconnected, nullptr);
-	signal_handler_connect(signal, "deactivate", &onDeactive, nullptr);
+	signal_handler_connect(signalHandler, "starting", &onStarting, nullptr);
+	signal_handler_connect(signalHandler, "start", &onStarted, nullptr);
+	signal_handler_connect(signalHandler, "stopping", &onStopping, nullptr);
+	signal_handler_connect(signalHandler, "stop", &onStopped, nullptr);
+	signal_handler_connect(signalHandler, "reconnect", &onReconnect, nullptr);
+	signal_handler_connect(signalHandler, "reconnecte_success", &onReconnected, nullptr);
+	signal_handler_connect(signalHandler, "deactivate", &onDeactive, nullptr);
 
-	auto res = obs_output_start(op);
-	blog(LOG_INFO, "start %d", res);
-	if (!res)
+	auto result = obs_output_start(outputInstance);
+	blog(LOG_INFO, "start %d", result);
+	if (!result)
 		return {{"error", "output start failed"}};
 
-	output = op;
-	begin_time = std::chrono::steady_clock::now();
+	output = outputInstance;
+	beginTime = std::chrono::steady_clock::now();
 
 	return {{"result", "OK"}};
 }
@@ -220,30 +220,30 @@ json stop()
 
 json getStatus()
 {
-	json r;
+	json result;
 	bool active = output && obs_output_active(output);
-	r["active"] = active;
-	r["status"] = statusMessage;
-	r["error"] = errorMessage;
+	result["active"] = active;
+	result["status"] = statusMessage;
+	result["error"] = errorMessage;
 	if (active)
 	{
-		r["duration"] = (std::chrono::steady_clock::now() - begin_time) / std::chrono::seconds(1);
-		r["connect_time"] = obs_output_get_connect_time_ms(output);
-		r["bytes"] = obs_output_get_total_bytes(output);
-		r["frames"] = obs_output_get_total_frames(output);
-		r["congestion"] = obs_output_get_congestion(output);
-		r["dropped"] = obs_output_get_frames_dropped(output);
+		result["duration"] = (std::chrono::steady_clock::now() - beginTime) / std::chrono::seconds(1);
+		result["connectTime"] = obs_output_get_connect_time_ms(output);
+		result["bytes"] = obs_output_get_total_bytes(output);
+		result["frames"] = obs_output_get_total_frames(output);
+		result["congestion"] = obs_output_get_congestion(output);
+		result["dropped"] = obs_output_get_frames_dropped(output);
 	}
 
-	return r;
+	return result;
 }
 
 json getInfo()
 {
-	json r;
-	r["version"] = VERSION;
-	r["process"] = GetCurrentProcessId();
-	return r;
+	json result;
+	result["version"] = VERSION;
+	result["process"] = GetCurrentProcessId();
+	return result;
 }
 
 //-------------------------------------------
@@ -251,23 +251,23 @@ json getInfo()
 json anyFunction(const json &arg)
 {
 	auto id = arg["id"].get<std::string>();
-	auto fn = arg["fn"].get<std::string>();
-	auto a = arg["arg"];
-	json r;
+	auto functionName = arg["fn"].get<std::string>();
+	auto functionArg = arg["arg"];
+	json result;
 
-	if (fn == "enumEncoderTypes")
-		r = enumEncoderTypes();
-	if (fn == "start")
-		r = start(a);
-	if (fn == "stop")
-		r = stop();
-	if (fn == "status")
-		r = getStatus();
-	if (fn == "info")
-		r = getInfo();
+	if (functionName == "enumEncoderTypes")
+		result = enumEncoderTypes();
+	if (functionName == "start")
+		result = start(functionArg);
+	if (functionName == "stop")
+		result = stop();
+	if (functionName == "status")
+		result = getStatus();
+	if (functionName == "info")
+		result = getInfo();
 
-	json result = {{"id", id}, {"res", r}};
-	return result;
+	json response = {{"id", id}, {"res", result}};
+	return response;
 }
 
 // nameがユニークなので複数起動はできないので注意
@@ -277,16 +277,16 @@ json anyFunction(const json &arg)
 DWORD WINAPI serve(LPVOID lpParam)
 {
 
-	HANDLE hPipe = CreateNamedPipe(PIPE_NAME, PIPE_ACCESS_DUPLEX,
+	HANDLE pipeHandle = CreateNamedPipe(PIPE_NAME, PIPE_ACCESS_DUPLEX,
 								   PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, BUFFER_SIZE, BUFFER_SIZE, 0, NULL);
 
-	if (hPipe == INVALID_HANDLE_VALUE)
+	if (pipeHandle == INVALID_HANDLE_VALUE)
 	{
 		blog(LOG_INFO, "Failed to create named pipe.");
 		return -1;
 	}
 
-	if (!ConnectNamedPipe(hPipe, NULL) && GetLastError() != ERROR_PIPE_CONNECTED)
+	if (!ConnectNamedPipe(pipeHandle, NULL) && GetLastError() != ERROR_PIPE_CONNECTED)
 	{
 		blog(LOG_INFO, "Failed to connect named pipe.");
 		return -1;
@@ -298,21 +298,21 @@ DWORD WINAPI serve(LPVOID lpParam)
 
 	while (isActive)
 	{
-		if (ReadFile(hPipe, buffer, BUFFER_SIZE, &bytesRead, NULL))
+		if (ReadFile(pipeHandle, buffer, BUFFER_SIZE, &bytesRead, NULL))
 		{
 			if (!bytesRead)
 				continue;
 			buffer[bytesRead] = '\0';
 			// blog(LOG_INFO, "recv %s", buffer);
-			auto j = json::parse(buffer);
-			auto r = anyFunction(j);
-			auto rb = r.dump();
-			WriteFile(hPipe, rb.c_str(), (DWORD)rb.size(), &bytesRead, NULL);
-			// blog(LOG_INFO, "send %s", rb.c_str());
+			auto jsonInput = json::parse(buffer);
+			auto jsonResponse = anyFunction(jsonInput);
+			auto responseBuffer = jsonResponse.dump();
+			WriteFile(pipeHandle, responseBuffer.c_str(), (DWORD)responseBuffer.size(), &bytesRead, NULL);
+			// blog(LOG_INFO, "send %s", responseBuffer.c_str());
 		}
 	}
 
-	CloseHandle(hPipe);
+	CloseHandle(pipeHandle);
 
 	return 0;
 }
@@ -329,8 +329,8 @@ extern "C"
 		isActive = true;
 
 		DWORD threadId;
-		hThread = CreateThread(NULL, 0, serve, 0, 0, &threadId);
-		if (!hThread)
+		threadHandle = CreateThread(NULL, 0, serve, 0, 0, &threadId);
+		if (!threadHandle)
 		{
 			blog(LOG_INFO, "Failed to create thread.");
 			return false;
@@ -342,8 +342,8 @@ extern "C"
 	void obs_module_unload(void)
 	{
 		isActive = false;
-		//	WaitForSingleObject(hThread, INFINITE);
-		CloseHandle(hThread);
-		hThread = nullptr;
+		//	WaitForSingleObject(threadHandle, INFINITE);
+		CloseHandle(threadHandle);
+		threadHandle = nullptr;
 	}
 }
