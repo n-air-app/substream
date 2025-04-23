@@ -1,23 +1,55 @@
+# N Air Substream
 
-## N Air sub stream
+## 概要
 
-N Airに別途配信サービスへ配信する補助DLL
+N Air Substreamは、N Airアプリケーションから複数の配信サービスへ同時配信するための拡張機能（OBSプラグイン）です。名前付きパイプを使用したJSON形式の通信によって、N Airからのコマンドに応じてストリーミング配信の開始・停止などを制御します。
 
-## ビルド方法
+### 主な機能
 
-ビルドには Visual Studio C++ が必要です。
+- 複数の配信サービスへの同時配信
+- エンコーダータイプの列挙
+- ストリーミングの開始・停止
+- ストリーミング状態の監視
+- エラーハンドリングとステータス管理
 
-`git clone` して `nair-substream.sln` ソリューションを開いてビルドしてください。
+## ビルド
 
-コマンドラインの場合、Visual Studioのパスが通ってるとして
+#### 必要なもの
 
-`MSBuild.exe /p:Configuration=Release`
+- Visual Studio 2019以上（C++開発環境）
 
-コンパイル結果のファイル
+#### ビルド手順
 
-`.\x64\Release\nair-substream.dll`
+1. リポジトリをクローン
+   ```
+   git clone https://github.com/user/nair-substream.git
+   cd nair-substream
+   ```
 
-を、以下にコピーして使用します。
+2. Visual Studioでソリューションを開く
+   ```
+   start nair-substream.sln
+   ```
 
-`n-air-app\node_modules\obs-studio-node\obs-plugins\64bit\`
+3. ビルド設定を「Release」に変更し、ビルドを実行
+
+   または、コマンドラインからビルド:
+   ```
+   MSBuild.exe /p:Configuration=Release
+   ```
+
+4. ビルド成果物を配置
+   ```
+   copy .\x64\Release\nair-substream.dll n-air-app\node_modules\obs-studio-node\obs-plugins\64bit\
+   ```
+
+## 使用方法
+
+このプラグインはN Airアプリケーションと連携して動作します。N Airの設定画面から「サブストリーム設定」を選択し、追加の配信先を設定してください。
+
+## 開発者向け情報
+
+### 通信プロトコル
+
+プラグインは名前付きパイプ(`\\.\pipe\NAirSubstream`)を使用してN Airアプリケーションと通信します。JSONフォーマットでコマンドを送受信します。
 

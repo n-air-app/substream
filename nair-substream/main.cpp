@@ -1,4 +1,11 @@
-﻿#define STRICT
+﻿// NAir Substream - OBS Studioプラグイン
+//
+// このプラグインはOBS Studioのストリーミング機能をNAirアプリケーション経由で
+// リモート制御するための機能を提供します。名前付きパイプを使用して通信し、
+// JSONフォーマットでコマンドを受け取り、ストリーミングの開始/停止や
+// ステータス取得などの操作を実行します。
+
+#define STRICT
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 #define _USE_MATH_DEFINES
@@ -12,33 +19,45 @@ using json = nlohmann::json;
 
 #pragma comment(lib, "obs.lib")
 
-obs_output *output = nullptr;
-std::chrono::steady_clock::time_point beginTime = {};
-std::string statusMessage = "";
-std::string errorMessage = "";
+// グローバル変数
+obs_output *output = nullptr;						  // ストリーミング出力インスタンス
+std::chrono::steady_clock::time_point beginTime = {}; // ストリーミング開始時間
+std::string statusMessage = "";						  // 現在のステータスメッセージ
+std::string errorMessage = "";						  // エラーメッセージ（存在する場合）
 
-bool isActive = false;
-HANDLE threadHandle = nullptr;
+bool isActive = false;		   // プラグインがアクティブかどうか
+HANDLE threadHandle = nullptr; // 通信スレッドのハンドル
 
 //-------------------------------------------
+// OBS出力イベントハンドラー
+//-------------------------------------------
+
+// ストリーミングの開始処理中
 void onStarting(void *x, calldata_t *)
 {
 	statusMessage = "starting";
 	errorMessage = "";
 }
+
+// ストリーミングの開始完了
 void onStarted(void *x, calldata_t *)
 {
 	statusMessage = "started";
 }
+
+// ストリーミングの停止処理中
 void onStopping(void *x, calldata_t *)
 {
 	statusMessage = "stopping";
 }
+
+// ストリーミングの停止完了（エラーコードの処理も含む）
 void onStopped(void *x, calldata_t *param)
 {
 	statusMessage = "stopped";
 	errorMessage = "";
 
+	// エラーコードに応じたメッセージを設定
 	auto code = calldata_int(param, "code");
 	if (code == OBS_OUTPUT_SUCCESS)
 		errorMessage = "";
@@ -60,20 +79,31 @@ void onStopped(void *x, calldata_t *param)
 		errorMessage = "encode error";
 }
 
+// 再接続試行中
 void onReconnect(void *x, calldata_t *)
 {
 	statusMessage = "reconnect";
 }
+
+// 再接続成功
 void onReconnected(void *x, calldata_t *)
 {
 	statusMessage = "reconnected";
 }
+
+// 出力非アクティブ化
 void onDeactive(void *x, calldata_t *)
 {
 	statusMessage = "deactive";
 }
+
+//-------------------------------------------
+// 機能実装
 //-------------------------------------------
 
+// 利用可能なエンコーダータイプの列挙
+//
+// @return JSONオブジェクト - 音声および動画エンコーダーの種類と名前を含む
 json enumEncoderTypes()
 {
 	json audio = json::array();
@@ -98,6 +128,8 @@ json enumEncoderTypes()
 	return result;
 }
 
+// 現在のストリーミング出力とリソースを解放
+// エンコーダー、サービス、シグナルハンドラなどを全て解放します
 void release()
 {
 	if (!output)
@@ -141,6 +173,10 @@ void release()
 	output = nullptr;
 }
 
+// ストリーミングを開始
+//
+// @param arg JSONオブジェクト - 出力、サービス、エンコーダーの設定を含む
+// @return JSONオブジェクト - 結果またはエラーメッセージ
 json start(json &arg)
 {
 	blog(LOG_INFO, "start %s", arg.dump().c_str());
@@ -207,6 +243,9 @@ json start(json &arg)
 	return {{"result", "OK"}};
 }
 
+// ストリーミングを停止
+//
+// @return JSONオブジェクト - 操作結果
 json stop()
 {
 	if (output)
@@ -218,6 +257,10 @@ json stop()
 	return {{"result", "OK"}};
 }
 
+// 現在のストリーミングステータスを取得
+// アクティブ状態、エラー、統計情報を含む
+//
+// @return JSONオブジェクト - ステータス情報
 json getStatus()
 {
 	json result;
@@ -238,6 +281,9 @@ json getStatus()
 	return result;
 }
 
+// プラグイン情報を取得
+//
+// @return JSONオブジェクト - バージョンとプロセスID
 json getInfo()
 {
 	json result;
@@ -247,7 +293,12 @@ json getInfo()
 }
 
 //-------------------------------------------
+// コマンド処理
+//-------------------------------------------
 
+// 受信したJSONコマンドを解析して適切な関数を呼び出す
+// @param arg JSONオブジェクト - id, fn(関数名), arg(引数)を含む
+// @return JSONオブジェクト - コマンドの実行結果
 json anyFunction(const json &arg)
 {
 	auto id = arg["id"].get<std::string>();
@@ -270,15 +321,18 @@ json anyFunction(const json &arg)
 	return response;
 }
 
-// nameがユニークなので複数起動はできないので注意
+// 名前付きパイプの設定 - 名前がユニークなので複数起動はできないことに注意
 #define PIPE_NAME L"\\\\.\\pipe\\NAirSubstream"
 #define BUFFER_SIZE 4096
 
+// 名前付きパイプを使用してコマンドを受け付けるスレッド関数
+// @param lpParam スレッドパラメータ（使用せず）
+// @return スレッド終了コード
 DWORD WINAPI serve(LPVOID lpParam)
 {
 
 	HANDLE pipeHandle = CreateNamedPipe(PIPE_NAME, PIPE_ACCESS_DUPLEX,
-								   PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, BUFFER_SIZE, BUFFER_SIZE, 0, NULL);
+										PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1, BUFFER_SIZE, BUFFER_SIZE, 0, NULL);
 
 	if (pipeHandle == INVALID_HANDLE_VALUE)
 	{
@@ -317,11 +371,15 @@ DWORD WINAPI serve(LPVOID lpParam)
 	return 0;
 }
 
+// OBSプラグインのエントリーポイント
 extern "C"
 {
 	OBS_DECLARE_MODULE()
 	OBS_MODULE_USE_DEFAULT_LOCALE("nair-substream", "en-US")
 
+	// プラグインロード時に呼ばれる関数
+	// 通信スレッドを起動し、名前付きパイプサーバーを開始する
+	// @return 初期化成功ならtrue
 	bool obs_module_load(void)
 	{
 		blog(LOG_INFO, "substream plugin loaded successfully %s", VERSION);
@@ -339,6 +397,8 @@ extern "C"
 		return true;
 	}
 
+	// プラグインアンロード時に呼ばれる関数
+	// リソースを解放する
 	void obs_module_unload(void)
 	{
 		isActive = false;
