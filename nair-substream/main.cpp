@@ -22,11 +22,14 @@ using json = nlohmann::json;
 // グローバル変数
 obs_output *output = nullptr;						  // ストリーミング出力インスタンス
 std::chrono::steady_clock::time_point beginTime = {}; // ストリーミング開始時間
-std::string statusMessage = "";						  // 現在のステータスメッセージ
+std::string statusMessage = "stopped";				  // 現在のステータスメッセージ
 std::string errorMessage = "";						  // エラーメッセージ（存在する場合）
 
-bool isActive = false;		   // プラグインがアクティブかどうか
+bool isPluginActive = false;   // プラグインがアクティブかどうか
 HANDLE threadHandle = nullptr; // 通信スレッドのハンドル
+
+bool isBusy = false;	  // ストリーミング処理中かどうか
+bool isStreaming = false; // ストリーミング中かどうか
 
 //-------------------------------------------
 // OBS出力イベントハンドラー
@@ -37,18 +40,24 @@ void onStarting(void *x, calldata_t *)
 {
 	statusMessage = "starting";
 	errorMessage = "";
+	isBusy = true;
+	isStreaming = false;
 }
 
 // ストリーミングの開始完了
 void onStarted(void *x, calldata_t *)
 {
 	statusMessage = "started";
+	isBusy = false;
+	isStreaming = true;
 }
 
 // ストリーミングの停止処理中
 void onStopping(void *x, calldata_t *)
 {
 	statusMessage = "stopping";
+	isBusy = true;
+	isStreaming = true;
 }
 
 // ストリーミングの停止完了（エラーコードの処理も含む）
@@ -56,6 +65,8 @@ void onStopped(void *x, calldata_t *param)
 {
 	statusMessage = "stopped";
 	errorMessage = "";
+	isBusy = false;
+	isStreaming = false;
 
 	// エラーコードに応じたメッセージを設定
 	auto code = calldata_int(param, "code");
@@ -268,6 +279,8 @@ json getStatus()
 	result["active"] = active;
 	result["status"] = statusMessage;
 	result["error"] = errorMessage;
+	result["busy"] = isBusy;
+	result["streaming"] = isStreaming;
 	if (active)
 	{
 		result["duration"] = (std::chrono::steady_clock::now() - beginTime) / std::chrono::seconds(1);
@@ -350,7 +363,7 @@ DWORD WINAPI serve(LPVOID lpParam)
 	char buffer[BUFFER_SIZE + 4];
 	DWORD bytesRead;
 
-	while (isActive)
+	while (isPluginActive)
 	{
 		if (ReadFile(pipeHandle, buffer, BUFFER_SIZE, &bytesRead, NULL))
 		{
@@ -384,7 +397,7 @@ extern "C"
 	{
 		blog(LOG_INFO, "substream plugin loaded successfully %s", VERSION);
 
-		isActive = true;
+		isPluginActive = true;
 
 		DWORD threadId;
 		threadHandle = CreateThread(NULL, 0, serve, 0, 0, &threadId);
@@ -401,7 +414,7 @@ extern "C"
 	// リソースを解放する
 	void obs_module_unload(void)
 	{
-		isActive = false;
+		isPluginActive = false;
 		//	WaitForSingleObject(threadHandle, INFINITE);
 		CloseHandle(threadHandle);
 		threadHandle = nullptr;
