@@ -362,6 +362,7 @@ DWORD WINAPI serve(LPVOID lpParam)
 
 	char buffer[BUFFER_SIZE + 4];
 	DWORD bytesRead;
+	std::string receiveBuffer; // 受信データを蓄積するバッファ
 
 	while (isPluginActive)
 	{
@@ -369,13 +370,34 @@ DWORD WINAPI serve(LPVOID lpParam)
 		{
 			if (!bytesRead)
 				continue;
-			buffer[bytesRead] = '\0';
-			// blog(LOG_INFO, "recv %s", buffer);
-			auto jsonInput = json::parse(buffer);
-			auto jsonResponse = anyFunction(jsonInput);
-			auto responseBuffer = jsonResponse.dump();
-			WriteFile(pipeHandle, responseBuffer.c_str(), (DWORD)responseBuffer.size(), &bytesRead, NULL);
-			// blog(LOG_INFO, "send %s", responseBuffer.c_str());
+
+			// 受信データをバッファに追加
+			receiveBuffer.append(buffer, bytesRead);
+
+			// 改行区切りでJSONを処理
+			size_t pos;
+			while ((pos = receiveBuffer.find('\n')) != std::string::npos)
+			{
+				std::string jsonLine = receiveBuffer.substr(0, pos);
+				receiveBuffer.erase(0, pos + 1);
+
+				if (jsonLine.empty())
+					continue;
+
+				try
+				{
+					// blog(LOG_INFO, "recv %s", jsonLine.c_str());
+					auto jsonInput = json::parse(jsonLine);
+					auto jsonResponse = anyFunction(jsonInput);
+					auto responseBuffer = jsonResponse.dump(-1) + "\n";
+					WriteFile(pipeHandle, responseBuffer.c_str(), (DWORD)responseBuffer.size(), &bytesRead, NULL);
+					// blog(LOG_INFO, "send %s", responseBuffer.c_str());
+				}
+				catch (const json::parse_error &e)
+				{
+					blog(LOG_WARNING, "JSON parse error: %s", e.what());
+				}
+			}
 		}
 	}
 
