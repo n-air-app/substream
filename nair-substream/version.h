@@ -1,2 +1,4 @@
 
-#define VERSION "1.2.0"
+#define VERSION "1.2.1"
+#define TARGET_LIBOBS_VERSION "31.1.2sl19"
+#define TARGET_OBS_STUDIO_NODE_VERSION "0.26.28"

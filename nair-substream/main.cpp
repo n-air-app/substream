@@ -317,6 +317,9 @@ json getInfo()
 {
 	json result;
 	result["version"] = VERSION;
+	result["libobsVersion"] = TARGET_LIBOBS_VERSION;
+	result["runtimeLibobsVersion"] = obs_get_version_string();
+	result["obsStudioNodeVersion"] = TARGET_OBS_STUDIO_NODE_VERSION;
 	result["process"] = GetCurrentProcessId();
 	return result;
 }
@@ -433,7 +436,10 @@ extern "C"
 	// @return 初期化成功ならtrue
 	bool obs_module_load(void)
 	{
-		blog(LOG_INFO, "substream plugin loaded successfully %s", VERSION);
+		blog(LOG_INFO,
+		     "substream plugin %s loaded (built for libobs %s / obs-studio-node %s; runtime libobs %s)",
+		     VERSION, TARGET_LIBOBS_VERSION, TARGET_OBS_STUDIO_NODE_VERSION,
+		     obs_get_version_string());
 
 		isPluginActive = true;
 
