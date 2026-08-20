@@ -17,6 +17,11 @@ N Air Substreamは、N Airアプリケーションから複数の配信サービ
 #### 必要なもの
 
 - Visual Studio 2019以上（C++開発環境）
+- `thirdparty/obs-libs` に同梱されたLibOBS SDK
+
+現在のSDKバージョンは `thirdparty/obs-libs/VERSION` を参照してください。N Airが使用する
+`obs-studio-node` と一致するSDKのヘッダーおよび `obs.lib` を使用する必要があります。
+LibOBS更新時は `include/` と `lib/obs.lib` を必ず同時に置き換えてください。
 
 #### ビルド手順
 

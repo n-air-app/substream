@@ -76,16 +76,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)include;$(SolutionDir)thirdparty\obs-libs\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)thirdparty\obs-libs\bin;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)thirdparty\obs-libs\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)thirdparty\obs-libs\lib;$(LibraryPath)</LibraryPath>
     <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\nair-substream</IntDir>
     <linkage-MKL-static-win-x64>static</linkage-MKL-static-win-x64>
     <threading-MKL-static-win-x64>sequential</threading-MKL-static-win-x64>
     <interface-MKL-static-win-x64>lp64</interface-MKL-static-win-x64>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)include;$(SolutionDir)thirdparty\obs-libs\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)thirdparty\obs-libs\bin;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)thirdparty\obs-libs\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)thirdparty\obs-libs\lib;$(LibraryPath)</LibraryPath>
     <IntDir>$(ProjectDir)$(Platform)\$(Configuration)\</IntDir>
     <linkage-MKL-static-win-x64>static</linkage-MKL-static-win-x64>
     <threading-MKL-static-win-x64>sequential</threading-MKL-static-win-x64>

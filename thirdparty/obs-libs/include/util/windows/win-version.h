@@ -1,5 +1,5 @@
-﻿/*
- * Copyright (c) 2015 Hugh Bailey <obs.jim@gmail.com>
+/*
+ * Copyright (c) 2023 Lain Bailey <lain@obsproject.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,8 +29,7 @@ struct win_version_info {
 	int revis;
 };
 
-static inline int win_version_compare(const struct win_version_info *dst,
-				      const struct win_version_info *src)
+static inline int win_version_compare(const struct win_version_info *dst, const struct win_version_info *src)
 {
 	if (dst->major > src->major)
 		return 1;

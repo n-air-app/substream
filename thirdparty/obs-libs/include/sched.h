@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Module: sched.h
  *
  * Purpose:

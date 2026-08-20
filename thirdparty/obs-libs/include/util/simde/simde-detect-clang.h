@@ -1,4 +1,4 @@
-﻿/* Detect Clang Version
+/* Detect Clang Version
  * Created by Evan Nemerson <evan@nemerson.com>
  *
  * To the extent possible under law, the author(s) have dedicated all

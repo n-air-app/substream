@@ -1,4 +1,4 @@
-﻿/******************************************************************************
+/******************************************************************************
     Copyright (C) 2023 by Dennis Sädtler <dennis@obsproject.com>
 
     This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@
  * This file (re)defines various uthash settings for use in libobs
  */
 
-#include <uthash/uthash.h>
+#include <uthash.h>
 
 /* Use OBS allocator */
 #undef uthash_malloc

@@ -1,5 +1,8 @@
 .vs
 x64
+.sdk/
+.backup/
+nair-substream/x64/
 
 *.vcxproj.user
 *.aps

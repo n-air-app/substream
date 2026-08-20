@@ -1,5 +1,5 @@
-﻿/*
- * Copyright (c) 2014 Hugh Bailey <obs.jim@gmail.com>
+/*
+ * Copyright (c) 2023 Lain Bailey <lain@obsproject.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -44,10 +44,7 @@ public:
 
 	inline HANDLE *operator&() { return &handle; }
 
-	inline bool Valid() const
-	{
-		return handle && handle != INVALID_HANDLE_VALUE;
-	}
+	inline bool Valid() const { return handle && handle != INVALID_HANDLE_VALUE; }
 };
 
 class WinModule {

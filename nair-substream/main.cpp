@@ -176,7 +176,7 @@ void release()
 		signal_handler_disconnect(signalHandler, "stopping", &onStopping, nullptr);
 		signal_handler_disconnect(signalHandler, "stop", &onStopped, nullptr);
 		signal_handler_disconnect(signalHandler, "reconnect", &onReconnect, nullptr);
-		signal_handler_disconnect(signalHandler, "reconnected_success", &onReconnected, nullptr);
+		signal_handler_disconnect(signalHandler, "reconnect_success", &onReconnected, nullptr);
 		signal_handler_disconnect(signalHandler, "deactivate", &onDeactive, nullptr);
 	}
 
@@ -190,7 +190,7 @@ void release()
 // @return JSONオブジェクト - 結果またはエラーメッセージ
 json start(json &arg)
 {
-	blog(LOG_INFO, "start %s", arg.dump().c_str());
+	blog(LOG_INFO, "start requested");
 	release();
 
 	obs_data *outputParam = obs_data_create_from_json(arg["output"].dump().c_str());
@@ -213,9 +213,13 @@ json start(json &arg)
 	if (!videoEncoder)
 		return {{"error", "video encoder create failed"}};
 
-	auto video = obs_get_video();
-	blog(LOG_INFO, "video %x", video);
-	obs_encoder_set_video(videoEncoder, video);
+	auto videoInfo = obs_get_video_info_by_index2(0);
+	auto renderingMode = obs_get_video_rendering_mode();
+	auto videoMix = videoInfo ? obs_video_mix_get(videoInfo, renderingMode) : nullptr;
+	if (!videoMix)
+		return {{"error", "video mix get failed"}};
+	blog(LOG_INFO, "selected video rendering mode %d", renderingMode);
+	obs_encoder_set_video_mix(videoEncoder, videoMix);
 
 	auto audioParam = obs_data_create_from_json(arg["audio"].dump().c_str());
 	auto audioId = arg["audioId"].get_ref<std::string &>().c_str();
@@ -240,7 +244,7 @@ json start(json &arg)
 	signal_handler_connect(signalHandler, "stopping", &onStopping, nullptr);
 	signal_handler_connect(signalHandler, "stop", &onStopped, nullptr);
 	signal_handler_connect(signalHandler, "reconnect", &onReconnect, nullptr);
-	signal_handler_connect(signalHandler, "reconnecte_success", &onReconnected, nullptr);
+	signal_handler_connect(signalHandler, "reconnect_success", &onReconnected, nullptr);
 	signal_handler_connect(signalHandler, "deactivate", &onDeactive, nullptr);
 
 	auto result = obs_output_start(outputInstance);
@@ -274,6 +278,7 @@ json stop()
 // @return JSONオブジェクト - ステータス情報
 json getStatus()
 {
+	static auto lastLogTime = std::chrono::steady_clock::time_point{};
 	json result;
 	bool active = output && obs_output_active(output);
 	result["active"] = active;
@@ -289,6 +294,17 @@ json getStatus()
 		result["frames"] = obs_output_get_total_frames(output);
 		result["congestion"] = obs_output_get_congestion(output);
 		result["dropped"] = obs_output_get_frames_dropped(output);
+	}
+
+	auto now = std::chrono::steady_clock::now();
+	if (now - lastLogTime >= std::chrono::seconds(5))
+	{
+		blog(LOG_INFO, "substream status active %d status %s frames %llu bytes %llu dropped %d",
+		     active, statusMessage.c_str(),
+		     active ? (unsigned long long)obs_output_get_total_frames(output) : 0,
+		     active ? (unsigned long long)obs_output_get_total_bytes(output) : 0,
+		     active ? obs_output_get_frames_dropped(output) : 0);
+		lastLogTime = now;
 	}
 
 	return result;

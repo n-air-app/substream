@@ -1,4 +1,4 @@
-﻿/******************************************************************************
+/******************************************************************************
     Copyright (C) 2014 by Ruwen Hahn <palana@stunned.de>
 
     This program is free software: you can redistribute it and/or modify
@@ -28,12 +28,8 @@ typedef bool(media_remux_progress_callback)(void *data, float percent);
 extern "C" {
 #endif
 
-EXPORT bool media_remux_job_create(media_remux_job_t *job,
-				   const char *in_filename,
-				   const char *out_filename);
-EXPORT bool media_remux_job_process(media_remux_job_t job,
-				    media_remux_progress_callback callback,
-				    void *data);
+EXPORT bool media_remux_job_create(media_remux_job_t *job, const char *in_filename, const char *out_filename);
+EXPORT bool media_remux_job_process(media_remux_job_t job, media_remux_progress_callback callback, void *data);
 EXPORT void media_remux_job_destroy(media_remux_job_t job);
 
 #ifdef __cplusplus

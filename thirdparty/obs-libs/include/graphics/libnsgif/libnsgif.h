@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2004 Richard Wilson <richard.wilson@netsurf-browser.org>
  * Copyright 2008 Sean Fox <dyntryx@gmail.com>
  *

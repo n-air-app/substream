@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) 2020 Hans Petter Selasky <hps@selasky.org>
  *
  * Permission to use, copy, modify, and distribute this software for any

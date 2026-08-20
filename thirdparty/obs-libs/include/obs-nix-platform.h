@@ -1,5 +1,5 @@
-﻿/******************************************************************************
-    Copyright (C) 2020 by Georges Basile Stavracas Neto <georges.stavracas@gmail.com>
+/******************************************************************************
+    Copyright (C) 2019 by Jason Francis <cycl0ps@tuta.io>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,25 +17,36 @@
 
 #pragma once
 
+#include "util/c99defs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "obs-internal.h"
-
-struct obs_nix_hotkeys_vtable {
-	bool (*init)(struct obs_core_hotkeys *hotkeys);
-
-	void (*free)(struct obs_core_hotkeys *hotkeys);
-
-	bool (*is_pressed)(obs_hotkeys_platform_t *context, obs_key_t key);
-
-	void (*key_to_str)(obs_key_t key, struct dstr *dstr);
-
-	obs_key_t (*key_from_virtual_key)(int sym);
-
-	int (*key_to_virtual_key)(obs_key_t key);
+enum obs_nix_platform_type {
+	OBS_NIX_PLATFORM_INVALID,
+	OBS_NIX_PLATFORM_X11_EGL,
+	OBS_NIX_PLATFORM_WAYLAND,
 };
+
+/**
+ * Sets the Unix platform.
+ * @param platform The platform to select.
+ */
+EXPORT void obs_set_nix_platform(enum obs_nix_platform_type platform);
+/**
+ * Gets the host platform.
+ */
+EXPORT enum obs_nix_platform_type obs_get_nix_platform(void);
+/**
+ * Sets the host platform's display connection.
+ * @param display The host display connection.
+ */
+EXPORT void obs_set_nix_platform_display(void *display);
+/**
+ * Gets the host platform's display connection.
+ */
+EXPORT void *obs_get_nix_platform_display(void);
 
 #ifdef __cplusplus
 }

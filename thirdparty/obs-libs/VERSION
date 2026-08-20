@@ -1,0 +1,6 @@
+libobs: 31.1.2sl19
+compatibility: obs-studio-node 0.26.28
+
+This directory contains only the LibOBS headers and Windows x64 import library
+required to build nair-substream. Replace both include/ and lib/obs.lib together
+when updating LibOBS to avoid ABI mismatches.

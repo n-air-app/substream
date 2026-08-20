@@ -1,4 +1,4 @@
-﻿/* Check (assertions)
+/* Check (assertions)
  * Portable Snippets - https://gitub.com/nemequ/portable-snippets
  * Created by Evan Nemerson <evan@nemerson.com>
  *
