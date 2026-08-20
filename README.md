@@ -14,44 +14,78 @@ N Air Substreamは、N Airアプリケーションから複数の配信サービ
 
 ## ビルド
 
-#### 必要なもの
+### 必要なもの
 
-- Visual Studio 2019以上（C++開発環境）
+- Visual Studio 2026
+  - C++によるデスクトップ開発
+  - v145 C++ツールセット
+  - Windows SDK
 - `thirdparty/obs-libs` に同梱されたLibOBS SDK
 
-現在のSDKバージョンは `thirdparty/obs-libs/VERSION` を参照してください。N Airが使用する
-`obs-studio-node` と一致するSDKのヘッダーおよび `obs.lib` を使用する必要があります。
-LibOBS更新時は `include/` と `lib/obs.lib` を必ず同時に置き換えてください。
+### LibOBS SDKの互換性
 
-#### ビルド手順
+このプラグインはN Airと同じプロセスで動作し、LibOBSへ直接リンクします。そのため、
+ビルドに使うヘッダーと `obs.lib` は、N Airに組み込まれているLibOBSと同じビルドのものが
+必要です。通常版OBSや、近いバージョンのSDKでは代用できません。バージョンがずれると、
+ビルドに成功してもロード失敗やクラッシュ、予期しない動作が発生する可能性があります。
 
-1. リポジトリをクローン
-   ```
-   git clone https://github.com/user/nair-substream.git
-   cd nair-substream
-   ```
+現在の対応関係は次のとおりです。
 
-2. Visual Studioでソリューションを開く
-   ```
-   start nair-substream.sln
-   ```
+- N Air `obs-studio-node`: 0.26.28
+- LibOBS: 31.1.2sl19
+- LibOBSソース: [`streamlabs/obs-studio`](https://github.com/streamlabs/obs-studio)
+- 同梱SDK: `thirdparty/obs-libs/include` および `thirdparty/obs-libs/lib/obs.lib`
 
-3. ビルド設定を「Release」に変更し、ビルドを実行
+バージョンは [`thirdparty/obs-libs/VERSION`](thirdparty/obs-libs/VERSION) と、N Airが利用する
+[`native-deps` のリリース](https://github.com/n-air-app/native-deps/releases/tag/osn0.26.28)
+で確認できます。N Airの配布パッケージは同リリースの
+[`osn-0.26.28-release-win64.tar.gz`](https://github.com/n-air-app/native-deps/releases/download/osn0.26.28/osn-0.26.28-release-win64.tar.gz)
+から取得されています。`obs-studio-node` 側のビルド定義は
+[`streamlabs/obs-studio-node` の0.26.28タグ](https://github.com/streamlabs/obs-studio-node/tree/0.26.28)、
+LibOBSの対応ソースは
+[`streamlabs/obs-studio` の31.1.2sl19タグ](https://github.com/streamlabs/obs-studio/tree/31.1.2sl19)
+（commit `14cd01f72cb2a4e6b4e0e8d6da80533b44fd900d`）で確認できます。
 
-   または、コマンドラインからビルド:
-   ```powershell
-   # MSBuildをフルパスで実行
-   & "C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\amd64\MSBuild.exe" nair-substream.sln /p:Configuration=Release /p:Platform=x64
-   
-   # または、MSBuildをPATHに追加してから実行
-   $env:Path += ";C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\amd64"
-   msbuild nair-substream.sln /p:Configuration=Release /p:Platform=x64
-   ```
+SDKを更新するときは、次の順序で対応バージョンを確認します。
 
-4. ビルド成果物を配置
-   ```
-   copy .\x64\Release\nair-substream.dll n-air-app\node_modules\obs-studio-node\obs-plugins\64bit\
-   ```
+1. [N Airの`package.json`](https://github.com/n-air-app/n-air-app/blob/n-air_development/package.json)
+   で、使用している `obs-studio-node` のバージョンを確認する
+   （例: `osn0.26.28` の配布URLならバージョンは `0.26.28`）
+2. 対応する [`native-deps` のリリース](https://github.com/n-air-app/native-deps/releases)
+   で `LibOBSVersion` を確認する
+3. [`streamlabs/obs-studio` のタグ一覧](https://github.com/streamlabs/obs-studio/tags)
+   から同じバージョンのタグを開き、ソースとビルド定義を確認する
+4. 次のURLの `{LibOBSVersion}` を確認した値に置き換えてSDKを取得する
+
+```text
+https://obsstudios3.streamlabs.com/libobs-windows64-release-{LibOBSVersion}.7z
+```
+
+現在は `LibOBSVersion=31.1.2sl19` なので、取得先は
+[`libobs-windows64-release-31.1.2sl19.7z`](https://obsstudios3.streamlabs.com/libobs-windows64-release-31.1.2sl19.7z)
+です。このアーカイブのSHA-256は
+`EE7CF5078DD7D243303F98D589F5E3D7F7B060B6C9F40BB0CAA7F3976ABF260C` です。
+
+取得したSDKから `include/` とWindows x64用の `lib/obs.lib` を必ず同時に置き換え、
+`thirdparty/obs-libs/VERSION` も更新します。
+
+### ビルド手順
+
+リポジトリをクローンします。
+
+```powershell
+git clone https://github.com/n-air-app/substream.git
+cd substream
+```
+
+Developer PowerShell for Visual Studioで次のコマンドを実行します。
+
+```powershell
+msbuild nair-substream.sln /p:Configuration=Release /p:Platform=x64
+```
+
+成果物は `x64\Release\nair-substream.dll` に出力されます。N Airで使用するには、
+このDLLをN Air側の `obs-plugins\64bit` ディレクトリへ配置してください。
 
 ## 使用方法
 
@@ -59,133 +93,22 @@ LibOBS更新時は `include/` と `lib/obs.lib` を必ず同時に置き換え�
 
 ## 開発者向け情報
 
-### 通信プロトコル
+プラグインはUTF-8のJSONを名前付きパイプ `\\.\pipe\NAirSubstream` で送受信します。
+メッセージは改行 (`\n`) 区切りで、各リクエストの末尾にも改行が必要です。
 
-プラグインは名前付きパイプ(`\\.\pipe\NAirSubstream`)を使用してN Airアプリケーションと通信します。JSONフォーマットでコマンドを送受信します。
-
-#### メッセージフォーマット
-
-- **デリミタ**: 改行文字 (`\n`) で区切られたJSON
-- **エンコーディング**: UTF-8
-- **リクエスト形式**:
-  ```json
-  {"id": "unique-id", "fn": "function-name", "arg": {...}}\n
-  ```
-
-- **レスポンス形式**:
-  ```json
-  {"id": "unique-id", "res": {...}}\n
-  ```
-
-**重要**: 送信側は必ず各JSONメッセージの末尾に改行文字 (`\n`) を付けて送信してください。改行がないとプラグイン側でメッセージを認識できません。
-
-#### 利用可能なコマンド
-
-##### 1. `enumEncoderTypes` - エンコーダータイプの列挙
-
-**リクエスト**:
 ```json
-{"id": "1", "fn": "enumEncoderTypes", "arg": {}}\n
+{"id": "1", "fn": "status", "arg": {}}
 ```
 
-**レスポンス**:
+応答は同じ `id` と、結果またはエラーを格納した `res` を返します。
+
 ```json
-{
-  "id": "1",
-  "res": {
-    "encoders": {
-      "audio": [{"id": "...", "name": "..."}],
-      "video": [{"id": "...", "name": "..."}]
-    }
-  }
-}\n
+{"id": "1", "res": {"active": true, "status": "started"}}
 ```
 
-##### 2. `start` - ストリーミング開始
+## ライセンス
 
-**リクエスト**:
-```json
-{
-  "id": "2",
-  "fn": "start",
-  "arg": {
-    "output": {...},
-    "service": {...},
-    "videoId": "obs_x264",
-    "video": {...},
-    "audioId": "ffmpeg_aac",
-    "audio": {...}
-  }
-}\n
-```
-
-**レスポンス**:
-```json
-{"id": "2", "res": {"result": "OK"}}\n
-```
-
-または、エラー時:
-```json
-{"id": "2", "res": {"error": "エラーメッセージ"}}\n
-```
-
-##### 3. `stop` - ストリーミング停止
-
-**リクエスト**:
-```json
-{"id": "3", "fn": "stop", "arg": {}}\n
-```
-
-**レスポンス**:
-```json
-{"id": "3", "res": {"result": "OK"}}\n
-```
-
-##### 4. `status` - ステータス取得
-
-**リクエスト**:
-```json
-{"id": "4", "fn": "status", "arg": {}}\n
-```
-
-**レスポンス**:
-```json
-{
-  "id": "4",
-  "res": {
-    "active": true,
-    "status": "started",
-    "error": "",
-    "busy": false,
-    "streaming": true,
-    "duration": 120,
-    "connectTime": 1234,
-    "bytes": 1048576,
-    "frames": 3600,
-    "congestion": 0.0,
-    "dropped": 0
-  }
-}\n
-```
-
-**ステータス値**:
-- `starting` - ストリーミング開始処理中
-- `started` - ストリーミング配信中
-- `stopping` - ストリーミング停止処理中
-- `stopped` - ストリーミング停止
-- `reconnect` - 再接続試行中
-- `reconnected` - 再接続成功
-- `deactive` - 非アクティブ化
-
-##### 5. `info` - プラグイン情報取得
-
-**リクエスト**:
-```json
-{"id": "5", "fn": "info", "arg": {}}\n
-```
-
-**レスポンス**:
-```json
-{"id": "5", "res": {"version": "1.0.0", "process": 12345}}\n
-```
-
+N Air Substreamは、N Air本体と同じくGNU General Public License v3のもとで
+公開されています。詳細は
+`LICENSE` を参照してください。同梱している第三者ソフトウェアのライセンスについては
+`thirdparty/README.md` および `thirdparty/LICENSES/` を参照してください。
